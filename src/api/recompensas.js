@@ -1,14 +1,19 @@
+// src/api/recompensas.js
 const express = require('express');
 const router = express.Router();
 
+/**
+ * POST /api/v1/recompensas/canjear-invitacion
+ * Body: { userId: number, code: string }
+ */
 router.post('/canjear-invitacion', (req, res) => {
   const { userId, code } = req.body || {};
   if (!userId || !code) {
     return res.status(400).json({ ok: false, message: 'Faltan parámetros' });
   }
 
-  const ESTRELLAS = 100;
-  const codigo = String(code).trim();
+  const ESTRELLAS = 100;                 // <--- Asegúrate que NO sea 0
+  const codigo = String(code).trim();    // el trigger normaliza a MAYÚSCULAS y sin espacios
 
   req.getConnection((err, conn) => {
     if (err) {
@@ -16,90 +21,82 @@ router.post('/canjear-invitacion', (req, res) => {
       return res.status(500).json({ ok: false, message: 'Error interno (DB connect)' });
     }
 
-    conn.beginTransaction((errTx) => {
-      if (errTx) {
-        console.error('[TX begin]', errTx);
-        return res.status(500).json({ ok: false, message: 'Error interno (TX begin)' });
-      }
-
-      // 1) Intentar registrar el canje (único por usuario+codigo)
-      conn.query(
-        'INSERT INTO InvitacionCanje (IdUsuario, Codigo, Estrellas) VALUES (?, ?, ?)',
-        [userId, codigo, ESTRELLAS],
-        (errInsert) => {
-          if (errInsert) {
-            // Caso: código ya canjeado antes → responder con popup y saldo actual
-            if (errInsert.code === 'ER_DUP_ENTRY' || errInsert.errno === 1062) {
-              return conn.rollback(() => {
-                conn.query(
-                  'SELECT estrellas_acumuladas AS saldo FROM Usuario WHERE IdUsuario = ?',
-                  [userId],
-                  (eSel, rows) => {
-                    const saldo = (!eSel && rows && rows[0]) ? rows[0].saldo : null;
-                    return res.json({
-                      ok: true,
-                      alreadyClaimed: true,
-                      award: {
-                        type: 'invite',
-                        stars: 0,
-                        message: 'Este código ya fue canjeado anteriormente'
-                      },
-                      balance: saldo
-                    });
-                  }
-                );
-              });
-            }
-            console.error('[DB insert]', errInsert);
-            return conn.rollback(() => res.status(500).json({ ok: false, message: 'Error interno (insert)' }));
+    // Usamos el PROCEDIMIENTO para centralizar la lógica
+    conn.query(
+      'CALL CanjearCodigoInvitacion(?, ?, ?)',
+      [userId, codigo, ESTRELLAS],       // <-- PASAR SIEMPRE EL 3er PARÁMETRO
+      (errProc, rows) => {
+        if (errProc) {
+          // Cuando el SP hace SIGNAL 'Este código ya fue canjeado...', MySQL devuelve errno 1644
+          if (errProc.errno === 1644) {
+            // Devolvemos "ya canjeado" + saldo actual
+            return conn.query(
+              'SELECT estrellas_acumuladas AS saldo FROM Usuario WHERE IdUsuario = ?',
+              [userId],
+              (eSel, rs) => {
+                const saldo = (!eSel && rs && rs[0]) ? rs[0].saldo : null;
+                return res.json({
+                  ok: true,
+                  alreadyClaimed: true,
+                  award: { type: 'invite', stars: 0, message: 'Este código ya fue canjeado anteriormente' },
+                  balance: saldo
+                });
+              }
+            );
           }
 
-          // 2) Sumar estrellas al usuario
-          conn.query(
-            'UPDATE Usuario SET estrellas_acumuladas = estrellas_acumuladas + ? WHERE IdUsuario = ?',
-            [ESTRELLAS, userId],
-            (errUpdate) => {
-              if (errUpdate) {
-                console.error('[DB update]', errUpdate);
-                return conn.rollback(() => res.status(500).json({ ok: false, message: 'Error interno (update)' }));
-              }
-
-              // 3) Leer saldo actualizado (dentro de la misma TX)
-              conn.query(
-                'SELECT estrellas_acumuladas AS saldo FROM Usuario WHERE IdUsuario = ?',
-                [userId],
-                (errSel, rowsSel) => {
-                  if (errSel) {
-                    console.error('[DB select balance]', errSel);
-                    return conn.rollback(() => res.status(500).json({ ok: false, message: 'Error interno (select balance)' }));
-                  }
-                  const saldo = rowsSel && rowsSel[0] ? rowsSel[0].saldo : null;
-
-                  // 4) Confirmar transacción
-                  conn.commit((errCommit) => {
-                    if (errCommit) {
-                      console.error('[TX commit]', errCommit);
-                      return conn.rollback(() => res.status(500).json({ ok: false, message: 'Error interno (TX commit)' }));
-                    }
-
-                    return res.json({
-                      ok: true,
-                      award: {
-                        type: 'invite',
-                        stars: ESTRELLAS,
-                        message: 'Obtuviste 100 Estrellas gracias a tu código de invitación'
-                      },
-                      balance: saldo
-                    });
-                  });
-                }
-              );
-            }
-          );
+          // Si el trigger pegó por estrellas <= 0 u otro problema
+          if (errProc.message) {
+            return res.status(400).json({ ok: false, message: errProc.message });
+          }
+          console.error('[SP error]', errProc);
+          return res.status(500).json({ ok: false, message: 'Error interno (SP)' });
         }
-      );
-    });
+
+        // El SP ya insertó y (por triggers) ajustó el saldo. Leemos el saldo para responder.
+        conn.query(
+          'SELECT estrellas_acumuladas AS saldo FROM Usuario WHERE IdUsuario = ?',
+          [userId],
+          (eSel, rs) => {
+            if (eSel) {
+              console.error('[DB select saldo]', eSel);
+              return res.status(500).json({ ok: false, message: 'Error interno (select saldo)' });
+            }
+            const saldo = rs && rs[0] ? rs[0].saldo : null;
+
+            return res.json({
+              ok: true,
+              alreadyClaimed: false,
+              award: { type: 'invite', stars: ESTRELLAS, message: 'Obtuviste 100 Estrellas gracias a tu código de invitación' },
+              balance: saldo
+            });
+          }
+        );
+      }
+    );
   });
 });
+
+/**
+ * GET /api/v1/recompensas/saldo?userId=123
+ */
+router.get('/saldo/:userId', (req, res) => {
+  const userId = req.params.userId;
+  if (!userId) return res.status(400).json({ ok: false, message: 'Falta userId' });
+
+  req.getConnection((err, conn) => {
+    if (err) return res.status(500).json({ ok: false, message: 'DB connect error' });
+    conn.query(
+      'SELECT estrellas_acumuladas AS saldo FROM Usuario WHERE IdUsuario = ?',
+      [userId],
+      (e, rows) => {
+        if (e) return res.status(500).json({ ok: false, message: 'Query error' });
+        const saldo = rows?.[0]?.saldo ?? 0;
+        return res.json({ ok: true, balance: saldo });
+      }
+    );
+  });
+});
+
 
 module.exports = router;
