@@ -26,6 +26,26 @@ const demandas = require('./demandas');
 const propuestas = require('./propuestas')
 const router = express.Router();
 
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Healthcheck de la API (v1)
+ *     description: Endpoint de bienvenida para verificar que la API (v1) está funcionando.
+ *     tags:
+ *       - Utilidades
+ *     responses:
+ *       '200':
+ *         description: La API está en línea.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'API - 👋🌎🌍🌏'
+ */
 router.get('/', (req, res) => {
   res.json({
     message: 'API - 👋🌎🌍🌏'

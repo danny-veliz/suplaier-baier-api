@@ -1,6 +1,53 @@
 var express = require('express');
 var router = express.Router();
 
+/**
+ * @swagger
+ * /solicitudRegistro:
+ *   get:
+ *     summary: Obtener solicitudes de registro pendientes
+ *     description: Obtiene todas las solicitudes de registro que tienen estado 'pendiente'. Se puede filtrar opcionalmente por 'id'.
+ *     tags:
+ *       - Registro
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         required: false
+ *         description: El ID de la solicitud de registro específica a buscar.
+ *         schema:
+ *           type: integer
+ *           example: 15
+ *     responses:
+ *       '200':
+ *         description: Lista de solicitudes pendientes obtenida con éxito.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 rows:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       IdSolicitud:
+ *                         type: integer
+ *                         example: 15
+ *                       IdRol:
+ *                         type: integer
+ *                         example: 2
+ *                       Nombre:
+ *                         type: string
+ *                         example: "Juan Pérez"
+ *                       Email:
+ *                         type: string
+ *                         example: "juan.perez@example.com"
+ *                       Estado:
+ *                         type: string
+ *                         example: "pendiente"
+ *       '500':
+ *         description: Error interno del servidor.
+ */
 router.get('/', function(req, res, next) {
   const id = req.query.id === undefined ? null : req.query.id;
   req.getConnection((err, conn) =>{
@@ -21,6 +68,71 @@ router.get('/', function(req, res, next) {
   });
 });
 
+/**
+ * @swagger
+ * /solicitudRegistro:
+ *   post:
+ *     summary: Enviar una nueva solicitud de registro
+ *     description: Un nuevo usuario (comprador o proveedor) envía sus datos para ser aprobados por un administrador.
+ *     tags:
+ *       - Registro
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               IdRol:
+ *                 type: integer
+ *                 example: 1
+ *               Nombre:
+ *                 type: string
+ *                 example: "María López"
+ *               Identificacion:
+ *                 type: string
+ *                 example: "0102030405"
+ *               Usuario:
+ *                 type: string
+ *                 example: "maria123"
+ *               Contrasena:
+ *                 type: string
+ *                 format: password
+ *                 example: "passSegura123"
+ *               Provincia:
+ *                 type: string
+ *                 example: "Pichincha"
+ *               Email:
+ *                 type: string
+ *                 format: email
+ *                 example: "maria.lopez@example.com"
+ *               Numero:
+ *                 type: string
+ *                 example: "+593987654321"
+ *               Pais:
+ *                 type: string
+ *                 example: "Ecuador"
+ *               Ciudad:
+ *                 type: string
+ *                 example: "Quito"
+ *               Direccion:
+ *                 type: string
+ *                 example: "Av. Amazonas N25-30"
+ *               urlImg:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://example.com/img/maria.jpg"
+ *     responses:
+ *       '200':
+ *         description: Solicitud creada exitosamente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *               example: "Solicitud creada exitosamente"
+ *       '500':
+ *         description: Error interno del servidor.
+ */
 router.post('/',function(req, res){
     const { IdRol, Nombre, Identificacion, Usuario, Contrasena, Provincia, Email, Numero, Pais, Ciudad, Direccion, urlImg } = req.body;
     req.getConnection((err, conn) =>{
@@ -35,7 +147,33 @@ router.post('/',function(req, res){
     })
 });
 
-
+/**
+ * @swagger
+ * /solicitudRegistro:
+ *   patch:
+ *     summary: Aprobar o rechazar una solicitud de registro
+ *     description: Actualiza el estado ('Estado') de una solicitud de registro (ej. 'aprobada', 'rechazada').
+ *     tags:
+ *       - Registro
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               IdSolicitud:
+ *                 type: integer
+ *                 example: 15
+ *               Estado:
+ *                 type: string
+ *                 example: "aprobada"
+ *     responses:
+ *       '200':
+ *         description: Actualización exitosa.
+ *       '500':
+ *         description: Error interno del servidor.
+ */
 router.patch('/', (req, res, next) => {
   const {IdSolicitud, Estado} = req.body;
   req.getConnection((err, conn) => {
@@ -51,7 +189,27 @@ router.patch('/', (req, res, next) => {
   })
 });
 
-
+/**
+ * @swagger
+ * /solicitudRegistro/{IdUser}:
+ *   delete:
+ *     summary: Eliminar una solicitud de registro
+ *     description: Elimina permanentemente una solicitud de registro (ej. una solicitud de spam).
+ *     tags:
+ *       - Registro
+ *     parameters:
+ *       - in: path
+ *         name: IdUser
+ *         required: true
+ *         description: El ID de la solicitud de registro a eliminar.
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       '204':
+ *         description: Solicitud eliminada con éxito (No Content).
+ *       '500':
+ *         description: Error interno del servidor.
+ */
 router.delete('/:IdUser', function (req, res) {
   const IdUser = req.params.IdUser;
   req.getConnection((err, conn) => {
