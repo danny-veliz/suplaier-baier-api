@@ -5,6 +5,8 @@ const cors = require("cors");
 const mysql = require("mysql2");
 const myconn = require("express-myconnection");
 const bodyParser = require('body-parser');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
 
 require("dotenv").config();
 /*const dbOptions = {
@@ -41,6 +43,22 @@ app.get("/", (req, res) => {
     message: "🦄🌈✨👋🌎🌍🌏✨🌈🦄",
   });
 });
+
+const options = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'SUPLAIER API',
+      description: 'Documentación de la API para el proyecto Suplaier.',
+      version: '1.0.0',
+    },
+  },
+  apis: ['./src/api/*.js'], 
+};
+
+const swaggerSpec = swaggerJsdoc(options);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/v1", api);
 
