@@ -5,6 +5,8 @@ const cors = require("cors");
 const mysql = require("mysql2");
 const myconn = require("express-myconnection");
 const bodyParser = require('body-parser');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
 
 require("dotenv").config();
 /*const dbOptions = {
@@ -41,6 +43,90 @@ app.get("/", (req, res) => {
     message: "🦄🌈✨👋🌎🌍🌏✨🌈🦄",
   });
 });
+
+const options = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'SUPLAIER API',
+      description: 'Documentación de la API para el proyecto Suplaier.',
+      version: '1.0.0',
+    },
+    servers: [
+      {
+        url: '/api/v1',
+        description: 'Servidor Principal'
+      }
+    ],
+    tags: [
+      {
+        name: 'Registro',
+        description: 'Endpoints para el registro y validación de usuarios.'
+      },
+      {
+        name: 'Autenticación',
+        description: 'Endpoints para el login de usuarios.'
+      },
+      {
+        name: 'Ofertas',
+        description: 'Endpoints relacionados con la gestión de ofertas.'
+      },
+      {
+        name: 'Productos',
+        description: 'Endpoints para gestionar productos y sus categorías.'
+      },
+      {
+        name: 'Compradores',
+        description: 'Endpoints para gestionar compradores y su autenticación.'
+      },
+      {
+        name: 'Compras',
+        description: 'Endpoints para gestionar las compras y transacciones.'
+      },
+      {
+        name: 'Demandas',
+        description: 'Endpoints para gestionar las demandas de los compradores.'
+      },
+      {
+        name: 'Notificaciones',
+        description: 'Endpoints para gestionar el envío de notificaciones.'
+      },
+      {
+        name: 'Estados',
+        description: 'Endpoints para obtener los estados de ofertas/demandas.'
+      },
+      {
+        name: 'Utilidades',
+        description: 'Endpoints de utilidades (ej. obtener hora del servidor).'
+      },
+      {
+        name: 'Auditoría',
+        description: 'Endpoints para consultar logs de auditoría.'
+      },
+      {
+        name: 'Propuestas',
+        description: 'Endpoints para gestionar las propuestas de proveedores a demandas.'
+      },
+      {
+        name: 'Proveedores',
+        description: 'Endpoints para gestionar proveedores y su autenticación.'
+      },
+      {
+        name: 'Reportes',
+        description: 'Endpoints para gestionar reportes y quejas de usuarios.'
+      },
+      {
+        name: 'Usuarios',
+        description: 'Endpoints para la gestión de usuarios (CRUD).'
+      }
+    ]      
+  },
+  apis: ['./src/api/*.js'], 
+};
+
+const swaggerSpec = swaggerJsdoc(options);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/v1", api);
 

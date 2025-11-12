@@ -1,6 +1,53 @@
 var express = require('express');
 var router = express.Router();
 
+/**
+ * @swagger
+ * /usuarios:
+ *   get:
+ *     summary: Obtener usuarios
+ *     description: Obtiene una lista de todos los usuarios. Se puede filtrar opcionalmente por 'idUsuario' o 'nombre'.
+ *     tags:
+ *       - Usuarios
+ *     parameters:
+ *       - in: query
+ *         name: idUsuario
+ *         required: false
+ *         description: El ID del usuario a buscar.
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: nombre
+ *         required: false
+ *         description: El nombre del usuario a buscar.
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Lista de usuarios obtenida con éxito.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 rows:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       IdUsuario:
+ *                         type: integer
+ *                       IdRol:
+ *                         type: integer
+ *                       Nombre:
+ *                         type: string
+ *                       Email:
+ *                         type: string
+ *                       codigo_invitacion:
+ *                         type: string
+ *       '500':
+ *         description: Error interno del servidor.
+ */
 /* GET users listing. */
 router.get('/', function(req, res, next) {
     const id = req.query.idUsuario === undefined ? null : req.query.idUsuario;
@@ -18,6 +65,78 @@ router.get('/', function(req, res, next) {
     });
   });
 
+/**
+ * @swagger
+ * /usuarios:
+ *   post:
+ *     summary: Crear un nuevo usuario (desde solicitud aprobada)
+ *     description: |
+ *       Registra un nuevo usuario en la tabla 'Usuario' (usualmente después de ser aprobado).
+ *       1. Genera un 'codigoGenerado' único para este nuevo usuario.
+ *       2. Si se provee un 'CodigoInvitacion', valida ese código y registra quién lo invitó ('invitado_por_id').
+ *       3. Si no se provee, 'invitado_por_id' es null.
+ *     tags:
+ *       - Usuarios
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               IdRol:
+ *                 type: integer
+ *               Nombre:
+ *                 type: string
+ *               Identificacion:
+ *                 type: string
+ *               Usuario:
+ *                 type: string
+ *               Contrasena:
+ *                 type: string
+ *                 format: password
+ *               Provincia:
+ *                 type: string
+ *               Email:
+ *                 type: string
+ *                 format: email
+ *               Numero:
+ *                 type: string
+ *               Pais:
+ *                 type: string
+ *               Ciudad:
+ *                 type: string
+ *               Direccion:
+ *                 type: string
+ *               UrlLogoEmpresa:
+ *                 type: string
+ *                 format: uri
+ *               CodigoInvitacion:
+ *                 type: string
+ *                 description: Opcional. El código de invitación de la persona que lo refirió.
+ *     responses:
+ *       '201':
+ *         description: Usuario registrado exitosamente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Usuario registrado exitosamente"
+ *                 userId:
+ *                   type: integer
+ *       '400':
+ *         description: Código de invitación inválido.
+ *       '409':
+ *         description: El usuario ya existe (Conflicto por email o usuario duplicado).
+ *       '500':
+ *         description: Error interno del servidor.
+ */
 /* Post para crear un nuevo usuario en la bd */
 router.post('/', function(req, res){
   const { 
