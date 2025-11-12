@@ -59,6 +59,8 @@ ADD CONSTRAINT fk_invitado_por FOREIGN KEY (invitado_por_id) REFERENCES Usuario(
 ALTER TABLE Usuario
 ADD UrlLogoEmpresa MEDIUMTEXT;
 
+DECLARE act_Pendiente CONSTANT VARCHAR2(20):= 'pendiente';
+
 CREATE TABLE IF NOT EXISTS solicitudesregistro (
 	IdSolicitud INT AUTO_INCREMENT PRIMARY KEY,
     IdRol INT,
@@ -73,7 +75,7 @@ CREATE TABLE IF NOT EXISTS solicitudesregistro (
 	Ciudad VARCHAR(50),
 	Direccion VARCHAR(200),
     FechaSolicitud DATETIME,
-    Estado ENUM('pendiente', 'aprobada', 'rechazada') DEFAULT 'pendiente',
+    Estado ENUM(act_Pendiente, 'aprobada', 'rechazada') DEFAULT act_Pendiente,
     FOREIGN KEY (IdRol) REFERENCES Rol(IdRol)
 );
 
@@ -165,7 +167,7 @@ CREATE TABLE IF NOT EXISTS Propuesta(
     IdProveedor INT,
     Precio INT,
     Cantidad INT,
-	Estado ENUM('pendiente', 'aprobada', 'rechazada') DEFAULT 'pendiente',
+	Estado ENUM(act_Pendiente, 'aprobada', 'rechazada') DEFAULT act_Pendiente,
     FOREIGN KEY (IdDemanda) REFERENCES Demanda(IdDemanda),
 	FOREIGN KEY (IdProveedor) REFERENCES Usuario(IdUsuario)
 );
