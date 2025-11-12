@@ -42,10 +42,10 @@ CREATE TABLE Usuario (
 );
 
 ALTER TABLE Usuario
-ADD Ruc VARCHAR(15);
+ADD Ruc VARCHAR2(15);
 
 ALTER TABLE Usuario
-ADD FirebaseToken VARCHAR(200);
+ADD FirebaseToken VARCHAR2(200);
 
 ALTER TABLE Usuario
 ADD COLUMN codigo_invitacion VARCHAR(50) UNIQUE,
