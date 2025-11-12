@@ -1,5 +1,6 @@
-var express = require('express');
-var router = express.Router();
+// src/api/auth.js
+const express = require('express');
+const router = express.Router();
 
 /**
  * @swagger
@@ -48,17 +49,30 @@ var router = express.Router();
  *       500:
  *         description: Error interno del servidor o error de conexión a la base de datos.
  */
-router.post('/', (req, res, next) => {
-  const {usuario, pass} = req.body;
-  req.getConnection((err, conn) =>{
-      if(err) return res.send(err);
-      conn.query(
-        `CALL Autenticacion("${usuario}","${pass}")`, 
-        (err, rows) => {
-          if(err) console.log(err);
-          res.json(rows[0]);
-      });
+router.post('/', (req, res) => {
+  const { usuario, pass } = req.body || {};
+
+  req.getConnection((err, conn) => {
+    if (err) {
+      return res.status(500).json({ ok: false, message: 'DB conn error' });
+    }
+
+    //Parametrizado (evita inyección)
+    conn.query('CALL Autenticacion(?, ?)', [usuario, pass], (err, rows) => {
+      if (err) {
+        console.error('AUTH DB ERROR:', err);
+        return res.status(500).json({ ok: false, error: 'AUTH_SQL_ERROR' });
+      }
+
+      // El front espera [] cuando no hay match
+      const payload = Array.isArray(rows) && Array.isArray(rows[0]) ? rows[0] : rows;
+      if (!Array.isArray(payload) || payload.length === 0) {
+        return res.json([]);
+      }
+
+      return res.json(payload);
     });
+  });
 });
 
 module.exports = router;

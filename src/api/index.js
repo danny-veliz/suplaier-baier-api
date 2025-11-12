@@ -2,6 +2,7 @@ const express = require('express');
 
 const productos = require('./productos');
 const ofertas = require('./ofertas');
+const recompensas = require('./recompensas'); 
 const compradores = require('./compradores');
 const proveedores = require('./proveedores');
 const compras = require('./compras');
@@ -75,5 +76,6 @@ router.use('/solicitudRegistro', enviarSolicitudesRegistro);
 router.use('/aceptarRegistro', aceptarSolicitudRegistro);
 router.use('/historialOferta',HistorialOferta);
 router.use('/demandas',demandas);
+router.use('/recompensas', recompensas);  
 router.use('/propuestas',propuestas)
 module.exports = router;
